@@ -1,0 +1,202 @@
+---
+title: "Project2"
+output: html_document
+date: "2024-09-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(here)
+library(dplyr)
+library(tidyverse)
+library(tidytuesdayR)
+```
+
+## Part 1: Fun with Functions
+
+### Part 1A: Exponential transformation
+
+Of course, we cannot compute an infinite series by the end of this term and so we must truncate it at a certain point in the series. The truncated sum of terms represents an approximation to the true exponential, but the approximation may be usable.
+
+Write a function that computes the exponential of a number using the truncated series expansion. The function should take two arguments:
+
+- x: the number to be exponentiated
+- k: the number of terms to be used in the series expansion beyond the constant 1. The value of k is always greater than or equal to 1. 
+
+Assume:
+- the input value x will always be a single number.
+- You can assume that the value k will always be an integer greater than or equal to 1
+- Do not use the exp() function in R.
+- The factorial() function can be used to compute factorials.
+
+```{r}
+
+Exp <- function(x, k) {
+    # Add your solution here
+}
+
+```
+
+### Part 1B: Sample mean and sample standard deviation
+
+Next, write two functions called sample_mean() and sample_sd() that takes as input a vector of data of length 
+N and calculates the sample average and sample standard deviation for the set of 
+N observations.
+
+```{r}
+
+```
+
+### Part 1C: Confidence intervals
+
+Next, write a function called calculate_CI()
+
+```{r}
+
+```
+
+## Part 2: Wrangling data
+
+### Data
+
+```{r}
+rainfall <- readRDS(here("data", "tuesdata_rainfall.RDS"))
+temperature <- readRDS(here("data", "tuesdata_temperature.RDS"))
+```
+
+### Tasks
+
+1. Start with rainfall dataset and drop any rows with NAs
+
+2. Create a new column titled date that combines the columns year, month, day into one column separated by “-”. (e.g. “2020-01-01”). This column should not be a character, but should be recognized as a date. (Hint: check out the ymd() function in lubridate R package). You will also want to add a column that just keeps the year.
+
+3. Using the city_name column, convert the city names (character strings) to all upper case.
+
+4. Join this wrangled rainfall dataset with the temperature dataset such that it includes only observations that are in both data frames. (Hint: there are two keys that you will need to join the two datasets together). (Hint: If all has gone well thus far, you should have a dataset with 83,964 rows and 13 columns).
+
+```{r}
+rainfall <- rainfall %>% ## 1. drop na values
+  drop_na() 
+
+library(lubridate)
+rainfall <- rainfall %>% ## convert day and month to numeric vectors
+  mutate(day = as.numeric(day), month = as.numeric(month))
+
+rainfall <- rainfall %>% ## 2. create date variable, drop month and day
+  mutate("date" = make_date(year, month, day)) %>%
+  select(-c("month", 'day'))
+
+## rainfall <- rainfall %>% ## make year variable
+  ## mutate(date_year = lubridate::ymd(year, truncated = 2L))
+
+rainfall <- rainfall %>% ## 3. mutate city_name
+  mutate(city_name = toupper(city_name))
+
+df <- inner_join(rainfall, temperature, by = c("city_name", "date")) # 4. combine data frames
+```
+
+## Part 3: Data visualization
+
+In this part, we will practice our ggplot2 plotting skills within the tidyverse starting with our wrangled df data from Part 2. For full credit in this part (and for all plots that you make), your plots should include:
+
+- An overall title for the plot and a subtitle summarizing key trends that you found. Also include a caption in the   figure.
+- There should be an informative x-axis and y-axis label.
+
+Consider playing around with the theme() function to make the figure shine, including playing with background      colors, font, etc.
+
+### Part 3A: Plotting temperature data over time
+
+Use the functions in ggplot2 package to make a line plot of the max and min temperature (y-axis) over time (x-axis) for each city in our wrangled data from Part 2. You should only consider years 2014 and onwards. For full credit, your plot should include:
+
+- For a given city, the min and max temperature should both appear on the plot, but they should be two different     colors.
+- Use a facet function to facet by city_name to show all cities in one figure.
+
+```{r}
+gg <- df %>%
+    ggplot(aes(year, temperature, group = temp_type, color = temp_type)) + 
+    geom_line() + 
+    facet_wrap(~city_name)
+
+gg <- gg + labs(
+        title = "Minimum and Maximum Temperature Overtime in Five Australian Cities",
+        subtitle = "Incomplete Data",
+        x = "Year",
+        y = "Temperature"
+    )
+print(gg)
+```
+
+### Part 3B: Plotting rainfall over time
+
+Here we want to explore the distribution of rainfall (log scale) with histograms for a given city (indicated by the city_name column) for a given year (indicated by the year column) so we can make some exploratory plots of the data.
+
+The following code plots the data from one city (city_name == "PERTH") in a given year (year == 2000).
+
+```{r}
+df %>%
+    filter(city_name == "PERTH", year == 2000) %>%
+    ggplot(aes(log(rainfall))) +
+    geom_histogram()
+```
+
+The aim here is to design and implement a function that can be re-used to visualize all of the data in this dataset. There are 2 aspects that may vary in the dataset: The city_name and the year. Note that not all combinations of city_name and year have measurements.
+
+Your function should take as input two arguments city_name and year.
+
+Given the input from the user, your function should return a single histogram for that input. Furthermore, the data should be readable on that plot so that it is in fact useful. It should be possible visualize the entire dataset with your function (through repeated calls to your function).
+
+If the user enters an input that does not exist in the dataset, your function should catch that and report an error (via the stop() function).
+
+```{r}
+
+gg_function <- function(df, city_name, year) {
+  if (!(city_name %in% df$city_name) | # Error message for invalid inputs
+      !(year %in% df$year)) {
+    stop("Error: Invalid input. Please check the data and input parameters before trying again.")
+  }
+  
+  df %>%
+    filter(city_name == !!city_name, year == !!year) %>%  # Filter data based on the city and year
+    ggplot(aes(log(rainfall))) +  # Plot histogram for the log of rainfall
+    geom_histogram() +  
+    labs(title = paste("Rainfall Distribution in", city_name, "for the year", year),
+         x = "Log of Rainfall",
+         y = "Frequency")
+}
+
+gg_function(df, "PERTH", 2000) # Call
+```
+
+For this section, write a short description of how you chose to design your function and why.
+
+## Part 4: Apply functions and plot
+
+### Part 4A: Tasks
+
+In this part, we will apply the functions we wrote in Part 1 to our rainfall data starting with our wrangled df data from Part 2.
+
+1. First, filter for only years including 2014 and onwards.
+
+```{r}
+df2014 <- df %>%
+  filter(year >= 2014)
+```
+
+2. For a given city and for a given year, calculate the sample mean (using your function sample_mean()), the sample standard deviation (using your function sample_sd()), and a 95% confidence interval for the average rainfall (using your function calculate_CI()). Specifically, you should add two columns in this summarized dataset: a column titled lower_bound and a column titled upper_bound containing the lower and upper bounds for you CI that you calculated (using your function calculate_CI()).
+
+```{r}
+  
+```
+
+3. Call this summarized dataset rain_df.
+
+```{r}
+
+```
+
+### Part 4B: Tasks
+
+Using the rain_df, plots the estimates of mean rainfall and the 95% confidence intervals on the same plot. There should be a separate faceted plot for each city. Think about using ggplot() with both geom_point() (and geom_line() to connect the points) for the means and geom_errorbar() for the lower and upper bounds of the confidence interval. Check https://r-graphics.org/recipe-annotate-error-bar and or the official documentation https://ggplot2.tidyverse.org/reference/geom_linerange.html for examples of how to use geom_errorbar().
