@@ -13,6 +13,7 @@ library(here)
 library(dplyr)
 library(tidyverse)
 library(tidytuesdayR)
+library(readr)
 ```
 
 ## Part 1: Fun with Functions
@@ -33,11 +34,17 @@ Assume:
 - The factorial() function can be used to compute factorials.
 
 ```{r}
-
 Exp <- function(x, k) {
-    # Add your solution here
+      k_total <- 0
+    while (k >= 1) {
+      k_value <- ((x^k)/factorial(k))
+      k_total <- k_total + k_value
+      k <- k-1
+}
+    print(1 + k_total)
 }
 
+Exp(2,4) # Example where x = 2 and k = 4
 ```
 
 ### Part 1B: Sample mean and sample standard deviation
@@ -47,6 +54,24 @@ N and calculates the sample average and sample standard deviation for the set of
 N observations.
 
 ```{r}
+sample_mean <- function(x) {
+  mean <- sum(x)/length(x)
+  return(mean)
+}
+
+sample_sd <- function(x) {
+     mean <- sum(x)/length(x)
+     sq_diff_mean <- (x - mean)^2
+     sd <- sqrt(sum(sq_diff_mean)/(length(x)-1))
+     return(sd)
+}
+
+# Example data
+maacs <- read_csv(here("data", "maacs_sim copy.csv"))
+pm25_v <- maacs$pm25 # Create vector of pm25
+
+sample_mean(pm25_v) # Mean calculation
+sample_sd(pm25_v) # Standard Deviation calculation
 
 ```
 
@@ -55,7 +80,21 @@ N observations.
 Next, write a function called calculate_CI()
 
 ```{r}
+calculate_CI <- function(x, conf = 0.95) {
+  mean <- sum(x)/length(x)
+    sq_diff_mean <- (x - mean)^2
+    sd <- sqrt(sum(sq_diff_mean)/(length(x)-1))
+  se <- sd/sqrt(length(x))
+    alpha <- 1 - conf
+    degrees_freedom <- length(x) - 1
+  t_score <- qt(p = alpha/2, df = degrees_freedom, lower.tail = FALSE)
+  ci <- c((mean - t_score*se), (mean + t_score*se))
+  return(ci)
+}
 
+# Example confidence interval calculations
+calculate_CI(pm25_v, conf = 0.975)
+calculate_CI(pm25_v, conf = 0.90)
 ```
 
 ## Part 2: Wrangling data
@@ -115,18 +154,18 @@ Use the functions in ggplot2 package to make a line plot of the max and min temp
 - Use a facet function to facet by city_name to show all cities in one figure.
 
 ```{r}
-gg <- df %>%
+gg1 <- df %>%
     ggplot(aes(year, temperature, group = temp_type, color = temp_type)) + 
     geom_line() + 
     facet_wrap(~city_name)
 
-gg <- gg + labs(
+gg1 <- gg1 + labs(
         title = "Minimum and Maximum Temperature Overtime in Five Australian Cities",
         subtitle = "Incomplete Data",
         x = "Year",
         y = "Temperature"
     )
-print(gg)
+print(gg1)
 ```
 
 ### Part 3B: Plotting rainfall over time
@@ -151,23 +190,21 @@ Given the input from the user, your function should return a single histogram fo
 If the user enters an input that does not exist in the dataset, your function should catch that and report an error (via the stop() function).
 
 ```{r}
-
-gg_function <- function(df, city_name, year) {
-  if (!(city_name %in% df$city_name) | # Error message for invalid inputs
-      !(year %in% df$year)) {
-    stop("Error: Invalid input. Please check the data and input parameters before trying again.")
+ggplot_function <- function(city, time) {
+  if (!(city %in% df$city_name) || # Error message for invalid inputs 
+      !(time %in% df$year)) { 
+    stop("Error: Invalid input. Please check the input parameters before trying again.")
   }
-  
   df %>%
-    filter(city_name == !!city_name, year == !!year) %>%  # Filter data based on the city and year
+    filter(city_name == !!city, year == !!time) %>%  # Filter data based on the city and year
     ggplot(aes(log(rainfall))) +  # Plot histogram for the log of rainfall
     geom_histogram() +  
-    labs(title = paste("Rainfall Distribution in", city_name, "for the year", year),
+    labs(title = paste("Rainfall Distribution in", city, "for the year", time),
          x = "Log of Rainfall",
          y = "Frequency")
 }
 
-gg_function(df, "PERTH", 2000) # Call
+ggplot_function("PERTH", 2000) # Call
 ```
 
 For this section, write a short description of how you chose to design your function and why.
@@ -187,16 +224,60 @@ df2014 <- df %>%
 
 2. For a given city and for a given year, calculate the sample mean (using your function sample_mean()), the sample standard deviation (using your function sample_sd()), and a 95% confidence interval for the average rainfall (using your function calculate_CI()). Specifically, you should add two columns in this summarized dataset: a column titled lower_bound and a column titled upper_bound containing the lower and upper bounds for you CI that you calculated (using your function calculate_CI()).
 
-```{r}
-  
-```
-
 3. Call this summarized dataset rain_df.
 
 ```{r}
 
+five_cities <- unique(df2014$city_name)
+six_years <- unique(df2014$year)
+
+rain_df <- data.frame(
+  city = character(),
+  year = integer(),
+  rain_mean = numeric(),
+  rain_sd = numeric(),
+  lower_bound = numeric(),
+  upper_bound = numeric(),
+  stringsAsFactors = FALSE
+)
+
+for(city in seq_along(five_cities)) {
+  for(time in seq_along(six_years)) {
+    filtered_df2014 <- df2014 %>%
+      filter(city_name == five_cities[city], year == six_years[time])
+        rain_mean <- sample_mean(filtered_df2014$rainfall)
+        rain_sd <- sample_sd(filtered_df2014$rainfall)
+        rain_ci <- calculate_CI(filtered_df2014$rainfall)
+          lower_bound <- rain_ci[1]
+          upper_bound <- rain_ci[2]
+      rain_df <- rbind(rain_df, data.frame(
+                       city = five_cities[city],
+                       year = six_years[time],
+                       rain_mean = rain_mean,
+                       rain_sd = rain_sd,
+                       lower_bound = lower_bound,
+                       upper_bound = upper_bound,
+                       stringsAsFactors = FALSE))
+    }
+}
 ```
 
 ### Part 4B: Tasks
 
 Using the rain_df, plots the estimates of mean rainfall and the 95% confidence intervals on the same plot. There should be a separate faceted plot for each city. Think about using ggplot() with both geom_point() (and geom_line() to connect the points) for the means and geom_errorbar() for the lower and upper bounds of the confidence interval. Check https://r-graphics.org/recipe-annotate-error-bar and or the official documentation https://ggplot2.tidyverse.org/reference/geom_linerange.html for examples of how to use geom_errorbar().
+```{r}
+gg2 <- rain_df %>%
+    ggplot(aes(year, rain_mean)) + 
+    geom_point() +
+    geom_line() + 
+    geom_errorbar(aes(ymin = lower_bound, ymax = upper_bound)) +
+    facet_wrap(~city) +
+    labs(
+      x = "Year",
+      y = "Average Amount of Rainfall (mm)",
+      title = "Average Amound of Rainfall in 5 Australian Cities 2014-2019"
+    )
+
+print(gg2)
+```
+
