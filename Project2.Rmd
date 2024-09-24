@@ -209,6 +209,8 @@ ggplot_function("PERTH", 2000) # Call
 
 For this section, write a short description of how you chose to design your function and why.
 
+*I wrote a function with two arguments, city and time. The first seciton of code within the function checks to see if the city exists wtihin the city_name column in the dataframe (df) and whether the time exists in the year column of the dataframe. If not, the function yields a stop error message to check the input parameters. If these two conditions are met, the function filters the dataframe by that specific year and city. It then creates a histogram of the log(rainfall) in that year against the frequency of times it occurred. The function includes a modifiable title based on the city and time inputs when called.*
+
 ## Part 4: Apply functions and plot
 
 ### Part 4A: Tasks
