@@ -150,20 +150,27 @@ Consider playing around with the theme() function to make the figure shine, incl
 
 Use the functions in ggplot2 package to make a line plot of the max and min temperature (y-axis) over time (x-axis) for each city in our wrangled data from Part 2. You should only consider years 2014 and onwards. For full credit, your plot should include:
 
-- For a given city, the min and max temperature should both appear on the plot, but they should be two different     colors.
+- For a given city, the min and max temperature should both appear on the plot, but they should be two different colors.
 - Use a facet function to facet by city_name to show all cities in one figure.
 
 ```{r}
 gg1 <- df %>%
-    ggplot(aes(year, temperature, group = temp_type, color = temp_type)) + 
+  filter(year >= 2014) %>%  
+  group_by(city_name, year) %>%
+  summarize(temp_min = min(temperature), temp_max = max(temperature)) %>%
+  pivot_longer(cols = starts_with("temp_"), names_to = "min_max", values_to = "range") %>%
+    ggplot(aes(x = year, y = range, color = min_max)) + 
+    geom_point() +  
     geom_line() + 
     facet_wrap(~city_name)
 
+
 gg1 <- gg1 + labs(
-        title = "Minimum and Maximum Temperature Overtime in Five Australian Cities",
-        subtitle = "Incomplete Data",
+        title = "Minimum and Maximum Temperature in Five Australian Cities from 2014-2019",
+        subtitle = "Melbourne and Perth see variation in maximum temperatures from 2014-2019",
         x = "Year",
-        y = "Temperature"
+        y = "Temperature",
+        caption = "Data source: TidyTuesday"
     )
 print(gg1)
 ```
@@ -189,7 +196,7 @@ Given the input from the user, your function should return a single histogram fo
 
 If the user enters an input that does not exist in the dataset, your function should catch that and report an error (via the stop() function).
 
-```{r}
+```{r, error=TRUE}
 ggplot_function <- function(city, time) {
   if (!(city %in% df$city_name) || # Error message for invalid inputs 
       !(time %in% df$year)) { 
@@ -199,12 +206,16 @@ ggplot_function <- function(city, time) {
     filter(city_name == !!city, year == !!time) %>%  # Filter data based on the city and year
     ggplot(aes(log(rainfall))) +  # Plot histogram for the log of rainfall
     geom_histogram() +  
-    labs(title = paste("Rainfall Distribution in", city, "for the year", time),
+    labs(title = paste("Rainfall in", city, "for the year", time),
+         subtitle = paste("Variation in distribution of rainfall in", city, "in", time),
          x = "Log of Rainfall",
-         y = "Frequency")
+         y = "Frequency",
+         caption = "Data source: TidyTuesday")
 }
 
 ggplot_function("PERTH", 2000) # Call
+
+ggplot_function("NEW YORK", 2000) # Error
 ```
 
 For this section, write a short description of how you chose to design your function and why.
@@ -277,7 +288,9 @@ gg2 <- rain_df %>%
     labs(
       x = "Year",
       y = "Average Amount of Rainfall (mm)",
-      title = "Average Amound of Rainfall in 5 Australian Cities 2014-2019"
+      title = "Average Amound of Rainfall in 5 Australian Cities 2014-2019",
+      subtitle = "Brisbane, Perth, and Melbourne see greater variation in average rainfall from 2014-2019",
+      caption = "Data source: TidyTuesday"
     )
 
 print(gg2)
